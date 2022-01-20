@@ -14,7 +14,7 @@ class WalletService {
             service: 'gmail',
             auth: {
               user: 'erhanwindows8@gmail.com',
-              pass: 'hyaqvmjkocnlmtkg'
+              pass: process.env.PASSWORD
             }
         });
         this.get();
