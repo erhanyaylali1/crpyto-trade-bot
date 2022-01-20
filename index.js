@@ -1,17 +1,16 @@
-import express from 'express';
-import cors from 'cors';
-import routes from './routes.js';
-import dotenv from 'dotenv';
+const express = require('express');
+const cors = require('cors');
+const routes = require('./routes.js');
+const dotenv = require('dotenv');
 
 dotenv.config();
-
 class Index {
 
     constructor() {
         this.server = express();
         this.middlewares();
         this.routes();
-        this.listen();
+        //this.listen();
     }
 
     middlewares() {

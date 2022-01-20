@@ -1,6 +1,7 @@
-import { Spot } from '@binance/connector'
-import dotenv from 'dotenv';
-import nodemailer from 'nodemailer';
+const { Spot } = require('@binance/connector');
+const dotenv = require('dotenv');
+const nodemailer = require('nodemailer');
+
 dotenv.config();
 
 class WalletService {
@@ -143,7 +144,7 @@ class WalletService {
 
 }
 
-export default WalletService;
+module.exports = WalletService;
 
 
 

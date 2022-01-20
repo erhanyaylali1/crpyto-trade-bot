@@ -1,6 +1,5 @@
-import express from 'express';
-import Service from './service.js';
-
+const express = require('express');
+const Service = require('./service.js');    
 class Routes {
 
     constructor() {
@@ -16,4 +15,4 @@ class Routes {
     }
 }
 
-export default new Routes().router;
+module.exports = new Routes().router;
