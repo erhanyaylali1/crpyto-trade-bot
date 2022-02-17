@@ -6,16 +6,16 @@ dotenv.config();
 
 class WalletService {
 
-    constructor () {
+    constructor() {
         this.client = new Spot(process.env.API_KEY, process.env.API_SECRET, {
             verbose: true,
             useServerTime: false,
-        });   
+        });
         this.transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-              user: 'erhanwindows8@gmail.com',
-              pass: process.env.PASSWORD
+                user: 'erhanwindows8@gmail.com',
+                pass: process.env.PASSWORD
             }
         });
         this.get();
@@ -29,8 +29,8 @@ class WalletService {
         await this.client.account().then(response => {
             const { balances } = response.data;
             balances.forEach((el) => {
-                if(el.asset === 'BNB') {
-                    if(el.free){
+                if (el.asset === 'SHIB') {
+                    if (el.free) {
                         this.shouldSell = true;
                     } else {
                         this.shouldSell = false;
@@ -49,28 +49,28 @@ class WalletService {
         console.log("-----------------------------------------------------------------------");
         const [bnbNumber, usdtNumber] = await this.getBnbNumber();
         const bnbPrice = await this.getBnbPrice();
-        
-        if(bnbPrice !== null) {
+
+        if (bnbPrice !== null) {
             try {
-                const wantedPrice = parseFloat(this.lastPrice * (1 + (this.shouldSell ? 0.005 : -0.005))).toFixed(1);
-                console.log(this.shouldSell ? "SELL":"BUY")
+                const wantedPrice = parseFloat(this.lastPrice * (1 + (this.shouldSell ? 0.005 : -0.005))).toFixed(8);
+                console.log(this.shouldSell ? "SELL" : "BUY")
                 console.log("Last Price: ", this.lastPrice);
                 console.log("Current Price: ", bnbPrice);
-                console.log("Wanted Price: ", wantedPrice); 
+                console.log("Wanted Price: ", wantedPrice);
                 const { data } = await this.client.openOrders();
                 console.log("Open Orders: ", data.map((el) => el.orderId), " lastTradeId: ", this.lastTradeId);
                 const isThereOrder = data.map((el) => el.orderId).includes(this.lastTradeId);
                 console.log("Is there order: ", isThereOrder);
-                if(!isThereOrder) {
-                    if(this.shouldSell && bnbPrice > wantedPrice) await this.sell(bnbPrice, bnbNumber);
-                    if(!this.shouldSell && bnbPrice < wantedPrice) await this.buy(bnbPrice, usdtNumber)
+                if (!isThereOrder) {
+                    if (this.shouldSell && bnbPrice > wantedPrice) await this.sell(bnbPrice, bnbNumber);
+                    if (!this.shouldSell && bnbPrice < wantedPrice) await this.buy(bnbPrice, usdtNumber)
                 } else {
                     console.log("işlem bitmedi");
                 }
             } catch (e) {
                 console.log(e);
             }
-            
+
         }
     }
 
@@ -79,9 +79,9 @@ class WalletService {
         await this.client.account().then(response => {
             const { balances } = response.data;
             balances.forEach((el) => {
-                if(el.asset === 'BNB') {
+                if (el.asset === 'SHIB') {
                     bnbNumber = el.free;
-                } else if(el.asset === 'USDT'){
+                } else if (el.asset === 'USDT') {
                     usdtNumber = el.free;
                 }
             })
@@ -91,21 +91,21 @@ class WalletService {
 
     getBnbPrice = async () => {
         let bnbPrice = null;
-        await this.client.tickerPrice('BNBUSDT')
-        .then((res) => {
-            bnbPrice = res.data.price
-            if(this.lastPrice === null) {
-                this.lastPrice = res.data.price;
-                console.log("lastPrice: ", this.lastPrice);
-            }
-        })
+        await this.client.tickerPrice('SHIBUSDT')
+            .then((res) => {
+                bnbPrice = res.data.price
+                if (this.lastPrice === null) {
+                    this.lastPrice = res.data.price;
+                    console.log("lastPrice: ", this.lastPrice);
+                }
+            })
         return bnbPrice;
     }
 
     sell = async (bnbPrice, bnbNumber) => {
-        await this.client.newOrder('BNBUSDT', 'SELL', 'LIMIT', {
+        await this.client.newOrder('SHIBUSDT', 'SELL', 'LIMIT', {
             price: bnbPrice,
-            quantity: parseFloat(bnbNumber * 0.9).toFixed(2),
+            quantity: parseInt(bnbNumber * 0.95),
             timeInForce: 'GTC'
         }).then(response => {
             console.log("satış, fiyat: ", bnbPrice);
@@ -114,30 +114,30 @@ class WalletService {
             this.lastPrice = bnbPrice;
             this.shouldSell = false;
         })
-        .catch(error => this.client.logger.error(error.response))
+            .catch(error => this.client.logger.error(error.response))
     }
 
     buy = async (bnbPrice, usdtNumber) => {
-        await this.client.newOrder('BNBUSDT', 'BUY', 'LIMIT', {
+        await this.client.newOrder('SHIBUSDT', 'BUY', 'LIMIT', {
             price: bnbPrice,
-            quantity: parseFloat(usdtNumber / bnbPrice).toFixed(2),
+            quantity: parseInt(usdtNumber / bnbPrice),
             timeInForce: 'GTC'
         }).then(response => {
-            console.log("alış, fiyat: " , bnbPrice);
+            console.log("alış, fiyat: ", bnbPrice);
             this.sendMail("ALIŞ", bnbPrice, this.lastPrice);
             this.lastTradeId = response.data.orderId
             this.lastPrice = bnbPrice;
             this.shouldSell = true;
         })
-        .catch(error => this.client.logger.error(error.response))
+            .catch(error => this.client.logger.error(error.response))
     }
 
-    sendMail = async (type ,price, lastPrice) => {
+    sendMail = async (type, price, lastPrice) => {
         var mailOptions = {
             from: 'erhanwindows8@gmail.com',
             to: 'erhanyaylali9@gmail.com',
-            subject: `BNB/USTD: ${parseFloat(price).toFixed(2)} fiyatından ${type} emri verildi.`,
-            text: `${new Date().toLocaleString()} tarihinde BNB/USTD: ${price} fiyatından ${type} emri verildi. Önceki Emir ise BNB:/USTD: ${parseFloat(lastPrice)}.toFixed(2)} fiyatından ${type === "ALIŞ" ? "SATIŞ":"ALIŞ"} olarak gerçekleştirildi.`
+            subject: `SHIB/USTD: ${parseFloat(price).toFixed(8)} fiyatından ${type} emri verildi.`,
+            text: `${new Date().toLocaleString()} tarihinde SHIB/USTD: ${price} fiyatından ${type} emri verildi. Önceki Emir ise SHIB:/USTD: ${parseFloat(lastPrice).toFixed(8)} fiyatından ${type === "ALIŞ" ? "SATIŞ" : "ALIŞ"} olarak gerçekleştirildi.`
         };
         await this.transporter.sendMail(mailOptions);
     }
